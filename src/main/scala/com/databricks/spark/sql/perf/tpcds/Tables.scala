@@ -70,7 +70,7 @@ case class TPCDSTableForTest(
         val parallel = if (partitions > 1) s"-parallel $partitions -child $i" else ""
         val commands = Seq(
           "bash", "-c",
-          s"cd $localToolsDir && ./dsdgen -table ${table.name} -filter Y -scale $scaleFactor $parallel")
+          s"cd $localToolsDir && ./dsdgen -table ${table.name} -_filter Y -force -scale $scaleFactor $parallel")
         println(commands)
         commands.lines
       }
