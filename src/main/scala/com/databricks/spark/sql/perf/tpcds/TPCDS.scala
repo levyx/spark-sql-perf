@@ -63,7 +63,7 @@ class TPCDS (
 
   override def setup(): Unit = {
     super.setup()
-    //setupBroadcast()
+    setupBroadcast()
   }
 
   def setupBroadcast(skipTables: Seq[String] = Seq("store_sales", "customer")) = {
