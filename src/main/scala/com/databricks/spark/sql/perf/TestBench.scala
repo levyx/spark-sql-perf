@@ -1,8 +1,8 @@
 package com.databricks.spark.sql.perf
 
-import org.apache.spark.{SparkConf, SparkContext}
-import org.apache.spark.sql.parquet.Tables
 import com.databricks.spark.sql.perf.tpcds._
+import org.apache.spark.sql.parquet.Tables
+import org.apache.spark.{SparkConf, SparkContext}
 
 
 /**
@@ -10,12 +10,12 @@ import com.databricks.spark.sql.perf.tpcds._
  */
 object TestBench {
   def main(args: Array[String]): Unit = {
-    var conf = new SparkConf().setAppName("ParquetTest").setMaster("local[1]")
+    val conf = new SparkConf().setAppName("ParquetTest").setMaster("local[8]")
+    val tpcPath = "/Users/hamid/tpc/tools"
 
 
     val sc = new SparkContext(conf)
     val sqlContext = new org.apache.spark.sql.SQLContext(sc)
-    import sqlContext.implicits._
 
     // Tables in TPC-DS benchmark used by experiments.
     val tables = Tables(sqlContext)
@@ -24,13 +24,13 @@ object TestBench {
       new TPCDS(
         sqlContext = sqlContext,
         sparkVersion = "1.3.0",
-        dataLocation = "/Users/hamid/tpc/old/tools",
-        dsdgenDir = "/Users/hamid/tpc/old/tools",
+        dataLocation = tpcPath,
+        dsdgenDir = tpcPath,
         tables = tables.tables,
         scaleFactor = "1")
 
     tpcds.setup()
-    val experiment = tpcds.runExperiment(queries.impalaKitQueries,"/Users/hamid/tpc/old/tools")
+    val experiment = tpcds.runExperiment(queries.impalaKitQueries, tpcPath)
 
   }
 }
