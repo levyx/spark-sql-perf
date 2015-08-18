@@ -12,6 +12,7 @@ object TestBench {
   def main(args: Array[String]): Unit = {
     val conf = new SparkConf().setAppName("ParquetTest").setMaster("local[8]")
     val tpcPath = "/Users/hamid/tpc/tools"
+    val resultsLocation = "/Users/hamid/results"
 
 
     val sc = new SparkContext(conf)
@@ -30,7 +31,18 @@ object TestBench {
         scaleFactor = "1")
 
     tpcds.setup()
-    val experiment = tpcds.runExperiment(queries.impalaKitQueries, tpcPath)
+    val experiment = tpcds.runExperiment(queries.impalaKitQueries, resultsLocation, iterations=1)
+
+    // Get experiments results.
+
+    val results = Results(resultsLocation = resultsLocation , sqlContext = sqlContext)
+    // Get the DataFrame representing all results stored in the dir specified by resultsLocation.
+    val allResults = results.allResults
+    // Use DataFrame API to get results of a single run.
+    //allResults.filter("timestamp = 1429132621024")
+    println("[")
+    allResults.toJSON.foreach(row => println(row+","))
+    println("]")
 
   }
 }

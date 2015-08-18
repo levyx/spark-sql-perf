@@ -217,7 +217,7 @@ abstract class Dataset(
 
       val timestamp = System.currentTimeMillis()
       val combinations = cartesianProduct(variations.map(l => (0 until l.options.size).toList).toList)
-      val resultsFuture = future {
+      val resultsFuture =  {
         val results = (1 to iterations).flatMap { i =>
           combinations.map { setup =>
             val currentOptions = variations.asInstanceOf[Seq[Variation[Any]]].zip(setup).map {
@@ -257,10 +257,10 @@ abstract class Dataset(
         resultsTable
       }
 
-      /** Waits for the finish of the experiment. */
-      def waitForFinish(timeoutInSeconds: Int) = {
-        Await.result(resultsFuture, timeoutInSeconds.seconds)
-      }
+//      /** Waits for the finish of the experiment. */
+//      def waitForFinish(timeoutInSeconds: Int) = {
+//        Await.result(resultsFuture, timeoutInSeconds.seconds)
+//      }
 
       /** Returns results from an actively running experiment. */
       def getCurrentResults() = {
@@ -280,12 +280,12 @@ abstract class Dataset(
         currentMessages.takeRight(n).mkString("\n")
       }
 
-      def status =
-        if (resultsFuture.isCompleted) {
-          if (resultsFuture.value.get.isFailure) "Failed" else "Successful"
-        } else {
-          "Running"
-        }
+      def status = "Successful"
+//        if (resultsFuture.isCompleted) {
+//          if (resultsFuture.value.get.isFailure) "Failed" else "Successful"
+//        } else {
+//          "Running"
+//        }
 
       override def toString =
         s"""
