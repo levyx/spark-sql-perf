@@ -46,15 +46,8 @@ abstract class TableForTest(
       lit(fromCatalog.queryExecution.optimizedPlan.statistics.sizeInBytes.toLong) as "sizeInBytes")
 
   def createTempTable(): Unit = {
-    sqlContext.sql(
-      s"""
-          |CREATE TEMPORARY TABLE ${name}
-          |USING org.apache.spark.sql.parquet
-          |OPTIONS (
-          |  path '${outputDir}'
-          |)
-        """.stripMargin)
-
+    val parquetFile = sqlContext.read.parquet(s"${outputDir}")
+    parquetFile.registerTempTable(s"${name}")
   }
 
   def generate(): Unit

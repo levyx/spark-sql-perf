@@ -68,11 +68,11 @@ case class TPCDSTableForTest(
         }
 
         val parallel = if (partitions > 1) s"-parallel $partitions -child $i" else ""
-        val commands1 = Seq(
-          "bash", "-c",
-          s"cd $localToolsDir && ./dsdgen -table ${table.name} -force -scale $scaleFactor $parallel")
-        println(commands1)
-        commands1.lines
+//        val commands1 = Seq(
+//          "bash", "-c",
+//          s"cd $localToolsDir && ./dsdgen -table ${table.name} -force -scale $scaleFactor $parallel")
+//        println(commands1)
+//        commands1.lines
         val commands2 = Seq(
           "bash", "-c",
           s"cat $localToolsDir/${table.name}.dat")
@@ -113,7 +113,7 @@ case class TPCDSTableForTest(
         val job = new Job(sqlContext.sparkContext.hadoopConfiguration)
 
         val writeSupport =
-          if (schema.fields.map(_.dataType).forall(_.isPrimitive)) {
+          if (schema.fields.map(_.dataType).forall(ParquetTypesConverter.isPrimitiveType)) {
             classOf[org.apache.spark.sql.parquet.MutableRowWriteSupport]
           } else {
             classOf[org.apache.spark.sql.parquet.RowWriteSupport]
@@ -140,6 +140,11 @@ case class TPCDSTableForTest(
           var hadoopContext: TaskAttemptContext = null
           var committer: OutputCommitter = null
 
+          val job = new Job(conf.value)
+          val keyType = classOf[Void]
+          job.setOutputKeyClass(keyType)
+          job.setOutputValueClass(classOf[Row])
+
           var rowCount = 0
           var partition = 0
 
@@ -154,6 +159,7 @@ case class TPCDSTableForTest(
               if (writer != null) {
                 writer.close(hadoopContext)
                 committer.commitTask(hadoopContext)
+                committer.commitJob(job)
               }
               writer = null
             }
@@ -165,12 +171,9 @@ case class TPCDSTableForTest(
               if (writer != null) {
                 writer.close(hadoopContext)
                 committer.commitTask(hadoopContext)
+                committer.commitJob(job)
               }
 
-              val job = new Job(conf.value)
-              val keyType = classOf[Void]
-              job.setOutputKeyClass(keyType)
-              job.setOutputValueClass(classOf[Row])
               NewFileOutputFormat.setOutputPath(
                 job,
                 new Path(s"$outputDir/$partitioningColumn=${currentPartition(0)}"))
@@ -196,11 +199,12 @@ case class TPCDSTableForTest(
           if (writer != null) {
             writer.close(hadoopContext)
             committer.commitTask(hadoopContext)
+            committer.commitJob(job)
           }
         }
         val fs = FileSystem.get(new java.net.URI(outputDir), new Configuration())
         fs.create(new Path(s"$outputDir/_SUCCESS")).close()
-      case _ => convertedData.saveAsParquetFile(outputDir)
+      case _ => convertedData.write.parquet(outputDir)
     }
   }
 }

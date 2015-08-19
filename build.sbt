@@ -3,7 +3,7 @@
 
 scalaVersion := "2.10.4"
 
-sparkVersion := "1.3.0"
+sparkVersion := "1.4.0"
 
 sparkPackageName := "databricks/spark-sql-perf"
 
@@ -22,6 +22,6 @@ sparkComponents ++= Seq("sql", "hive")
 
 // add any sparkPackageDependencies using sparkPackageDependencies.
 // e.g. sparkPackageDependencies += "databricks/spark-avro:0.1"
-libraryDependencies += "org.apache.spark" %% "spark-core" % "1.3.0"
+libraryDependencies += "org.apache.spark" %% "spark-core" % "1.4.0"
 
-libraryDependencies += "org.apache.spark" %% "spark-sql" % "1.3.0"
+libraryDependencies += "org.apache.spark" %% "spark-sql" % "1.4.0"
