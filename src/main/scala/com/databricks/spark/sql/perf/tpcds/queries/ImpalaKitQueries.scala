@@ -1472,4 +1472,5 @@ object ImpalaKitQueries {
   val reportingQueries = Seq("q3","q7","q27","q43", "q53", "q89").map(queriesMap)
   val deepAnalyticQueries = Seq("q34", "q46", "q59", "q65",  "q79", "ss_max").map(queriesMap)
   val impalaKitQueries = interactiveQueries ++ reportingQueries ++ deepAnalyticQueries
+  val xenonQueries = Seq("q19").map(queriesMap)
 }
