@@ -78,7 +78,7 @@ case class QueryForTest(
         query.executionMode match {
           case CollectResults => dataFrame.rdd.collect()
           case ForeachResults => dataFrame.rdd.foreach { row => Unit }
-          case WriteParquet(location) => dataFrame.saveAsParquetFile(s"$location/$name.parquet")
+          case WriteParquet(location) => dataFrame.write.xenon(s"$location/$name.parquet")
         }
       }
 

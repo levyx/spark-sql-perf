@@ -46,7 +46,7 @@ abstract class TableForTest(
       lit(fromCatalog.queryExecution.optimizedPlan.statistics.sizeInBytes.toLong) as "sizeInBytes")
 
   def createTempTable(): Unit = {
-    val parquetFile = sqlContext.read.parquet(s"${outputDir}")
+    val parquetFile = sqlContext.read.xenon(s"${outputDir}")
     parquetFile.registerTempTable(s"${name}")
   }
 
