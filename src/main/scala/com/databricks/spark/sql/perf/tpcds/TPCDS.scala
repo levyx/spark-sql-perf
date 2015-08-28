@@ -36,6 +36,7 @@ import org.apache.spark.sql.{Column, SQLContext}
  */
 class TPCDS (
     @transient sqlContext: SQLContext,
+    databaseName: String,
     sparkVersion: String,
     dataLocation: String,
     dsdgenDir: String,
@@ -47,7 +48,8 @@ class TPCDS (
     sparkVersion,
     dataLocation,
     tables,
-    scaleFactor) with Serializable {
+    scaleFactor,
+    databaseName = databaseName) with Serializable {
   import sqlContext._
   import sqlContext.implicits._
 
@@ -58,7 +60,7 @@ class TPCDS (
 
   override def createTablesForTest(tables: Seq[Table]): Seq[TableForTest] = {
     tables.map(table =>
-      TPCDSTableForTest(table, baseDir, scaleFactor.toInt, dsdgenDir, sqlContext))
+      TPCDSTableForTest(table, baseDir, scaleFactor.toInt, dsdgenDir, sqlContext, databaseName = databaseName))
   }
 
   override def setup(): Unit = {

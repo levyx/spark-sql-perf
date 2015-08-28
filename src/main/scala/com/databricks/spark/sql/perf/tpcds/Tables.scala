@@ -44,8 +44,9 @@ case class TPCDSTableForTest(
     scaleFactor: Int,
     dsdgenDir: String,
     @transient sqlContext: SQLContext,
-    maxRowsPerPartitions: Int = 20 * 1000 * 1000)
-  extends TableForTest(table, baseDir, sqlContext) with Serializable with SparkHadoopMapReduceUtil {
+    maxRowsPerPartitions: Int = 20 * 1000 * 1000,
+    databaseName: String)
+  extends TableForTest(table, baseDir, sqlContext, databaseName) with Serializable with SparkHadoopMapReduceUtil {
 
   @transient val sparkContext = sqlContext.sparkContext
 
@@ -107,107 +108,116 @@ case class TPCDSTableForTest(
 
     table.tableType match {
       // This is an awful hack... spark sql parquet should support this natively.
-//      case PartitionedTable(partitioningColumn) =>
-//        sqlContext.setConf("spark.sql.planner.externalSort", "true")
-//        val output = convertedData.queryExecution.analyzed.output
-//        val job = new Job(sqlContext.sparkContext.hadoopConfiguration)
-//
-//        val writeSupport =
-//          if (schema.fields.map(_.dataType).forall(ParquetTypesConverter.isPrimitiveType)) {
-//            classOf[org.apache.spark.sql.parquet.MutableRowWriteSupport]
-//          } else {
-//            classOf[org.apache.spark.sql.parquet.RowWriteSupport]
-//          }
-//
-//        ParquetOutputFormat.setWriteSupportClass(job, writeSupport)
-//
-//        val conf = new SerializableWritable(ContextUtil.getConfiguration(job))
-//        org.apache.spark.sql.parquet.RowWriteSupport.setSchema(schema.toAttributes, conf.value)
-//
-//        val partColumnAttr =
-//          BindReferences.bindReference[Expression](
-//            output.find(_.name == partitioningColumn).get,
-//            output)
-//
-//
-//        // TODO: clusterBy would be faster than orderBy
-//        val orderedConvertedData =
-//          convertedData.filter(new Column(partitioningColumn) isNotNull).orderBy(Column(partitioningColumn) asc)
-//        orderedConvertedData.queryExecution.toRdd.foreachPartition { iter =>
-//          var writer: RecordWriter[Void, Row] = null
-//          val getPartition = new InterpretedMutableProjection(Seq(partColumnAttr))
-//          var currentPartition: Row = null
-//          var hadoopContext: TaskAttemptContext = null
-//          var committer: OutputCommitter = null
-//
-//          val job = new Job(conf.value)
-//          val keyType = classOf[Void]
-//          job.setOutputKeyClass(keyType)
-//          job.setOutputValueClass(classOf[Row])
-//
-//          var rowCount = 0
-//          var partition = 0
-//
-//          while (iter.hasNext) {
-//            val currentRow = iter.next()
-//
-//            rowCount += 1
-//            if (rowCount >= maxRowsPerPartitions) {
-//              rowCount = 0
-//              partition += 1
-//              println(s"Starting partition $partition")
-//              if (writer != null) {
-//                writer.close(hadoopContext)
-//                committer.commitTask(hadoopContext)
-//                committer.commitJob(job)
-//              }
-//              writer = null
-//            }
-//
-//            if ((getPartition(currentRow) != currentPartition || writer == null) &&
-//              !getPartition.currentValue.isNullAt(0)) {
-//              rowCount = 0
-//              currentPartition = getPartition.currentValue.copy()
-//              if (writer != null) {
-//                writer.close(hadoopContext)
-//                committer.commitTask(hadoopContext)
-//                committer.commitJob(job)
-//              }
-//
-//              NewFileOutputFormat.setOutputPath(
-//                job,
-//                new Path(s"$outputDir/$partitioningColumn=${currentPartition(0)}"))
-//              val wrappedConf = new SerializableWritable(job.getConfiguration)
-//              val formatter = new SimpleDateFormat("yyyyMMddHHmm")
-//              val jobtrackerID = formatter.format(new Date())
-//              val stageId = partition
-//
-//              val attemptNumber = 1
-//              /* "reduce task" <split #> <attempt # = spark task #> */
-//              val attemptId = newTaskAttemptID(jobtrackerID, partition, isMap = false, partition, attemptNumber)
-//              hadoopContext = newTaskAttemptContext(wrappedConf.value, attemptId)
-//              val format = new ParquetOutputFormat[Row]
-//              committer = format.getOutputCommitter(hadoopContext)
-//              committer.setupTask(hadoopContext)
-//              writer = format.getRecordWriter(hadoopContext)
-//
-//            }
-//            if (!getPartition.currentValue.isNullAt(0)) {
-//              writer.write(null, currentRow)
-//            }
-//          }
-//          if (writer != null) {
-//            writer.close(hadoopContext)
-//            committer.commitTask(hadoopContext)
-//            committer.commitJob(job)
-//          }
-//        }
-//        val fs = FileSystem.get(new java.net.URI(outputDir), new Configuration())
-//        fs.create(new Path(s"$outputDir/_SUCCESS")).close()
-      case _ => convertedData.write.xenon(outputDir)
+      case PartitionedTable(partitioningColumn) =>
+        databaseName match {
+          case "parquet" => {
+            sqlContext.setConf("spark.sql.planner.externalSort", "true")
+            val output = convertedData.queryExecution.analyzed.output
+            val job = new Job(sqlContext.sparkContext.hadoopConfiguration)
+
+            val writeSupport =
+              if (schema.fields.map(_.dataType).forall(ParquetTypesConverter.isPrimitiveType)) {
+                classOf[org.apache.spark.sql.parquet.MutableRowWriteSupport]
+              } else {
+                classOf[org.apache.spark.sql.parquet.RowWriteSupport]
+              }
+
+            ParquetOutputFormat.setWriteSupportClass(job, writeSupport)
+
+            val conf = new SerializableWritable(ContextUtil.getConfiguration(job))
+            org.apache.spark.sql.parquet.RowWriteSupport.setSchema(schema.toAttributes, conf.value)
+
+            val partColumnAttr =
+              BindReferences.bindReference[Expression](
+                output.find(_.name == partitioningColumn).get,
+                output)
+
+
+            // TODO: clusterBy would be faster than orderBy
+            val orderedConvertedData =
+              convertedData.filter(new Column(partitioningColumn) isNotNull).orderBy(Column(partitioningColumn) asc)
+            orderedConvertedData.queryExecution.toRdd.foreachPartition { iter =>
+              var writer: RecordWriter[Void, Row] = null
+              val getPartition = new InterpretedMutableProjection(Seq(partColumnAttr))
+              var currentPartition: Row = null
+              var hadoopContext: TaskAttemptContext = null
+              var committer: OutputCommitter = null
+
+              val job = new Job(conf.value)
+              val keyType = classOf[Void]
+              job.setOutputKeyClass(keyType)
+              job.setOutputValueClass(classOf[Row])
+
+              var rowCount = 0
+              var partition = 0
+
+              while (iter.hasNext) {
+                val currentRow = iter.next()
+
+                rowCount += 1
+                if (rowCount >= maxRowsPerPartitions) {
+                  rowCount = 0
+                  partition += 1
+                  println(s"Starting partition $partition")
+                  if (writer != null) {
+                    writer.close(hadoopContext)
+                    committer.commitTask(hadoopContext)
+                    committer.commitJob(job)
+                  }
+                  writer = null
+                }
+
+                if ((getPartition(currentRow) != currentPartition || writer == null) &&
+                  !getPartition.currentValue.isNullAt(0)) {
+                  rowCount = 0
+                  currentPartition = getPartition.currentValue.copy()
+                  if (writer != null) {
+                    writer.close(hadoopContext)
+                    committer.commitTask(hadoopContext)
+                    committer.commitJob(job)
+                  }
+
+                  NewFileOutputFormat.setOutputPath(
+                    job,
+                    new Path(s"$outputDir/$partitioningColumn=${currentPartition(0)}"))
+                  val wrappedConf = new SerializableWritable(job.getConfiguration)
+                  val formatter = new SimpleDateFormat("yyyyMMddHHmm")
+                  val jobtrackerID = formatter.format(new Date())
+                  val stageId = partition
+
+                  val attemptNumber = 1
+                  /* "reduce task" <split #> <attempt # = spark task #> */
+                  val attemptId = newTaskAttemptID(jobtrackerID, partition, isMap = false, partition, attemptNumber)
+                  hadoopContext = newTaskAttemptContext(wrappedConf.value, attemptId)
+                  val format = new ParquetOutputFormat[Row]
+                  committer = format.getOutputCommitter(hadoopContext)
+                  committer.setupTask(hadoopContext)
+                  writer = format.getRecordWriter(hadoopContext)
+
+                }
+                if (!getPartition.currentValue.isNullAt(0)) {
+                  writer.write(null, currentRow)
+                }
+              }
+              if (writer != null) {
+                writer.close(hadoopContext)
+                committer.commitTask(hadoopContext)
+                committer.commitJob(job)
+              }
+            }
+            val fs = FileSystem.get(new java.net.URI(outputDir), new Configuration())
+            fs.create(new Path(s"$outputDir/_SUCCESS")).close()
+          }
+          case "xenon" => convertedData.write.xenon(outputDir)
+        }
+      case _ => databaseName match {
+        case "parquet" => convertedData.write.parquet(outputDir)
+        case "xenon" => convertedData.write.xenon(outputDir)
+      }
     }
   }
 }
+
 
 case class Tables(sqlContext: SQLContext) {
   import sqlContext.implicits._

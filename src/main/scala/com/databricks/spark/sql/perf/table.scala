@@ -29,7 +29,8 @@ case class Table(name: String, tableType: TableType, fields: StructField*)
 abstract class TableForTest(
     table: Table,
     baseDir: String,
-    @transient sqlContext: SQLContext) extends Serializable {
+    @transient sqlContext: SQLContext,
+    databaseName: String = "parquet") extends Serializable {
 
   val schema = StructType(table.fields)
 
@@ -46,7 +47,10 @@ abstract class TableForTest(
       lit(fromCatalog.queryExecution.optimizedPlan.statistics.sizeInBytes.toLong) as "sizeInBytes")
 
   def createTempTable(): Unit = {
-    val parquetFile = sqlContext.read.xenon(s"${outputDir}")
+    val parquetFile = databaseName match {
+      case "parquet" => sqlContext.read.parquet(s"${outputDir}")
+      case "xenon" => sqlContext.read.xenon(s"${outputDir}")
+    }
     parquetFile.registerTempTable(s"${name}")
   }
 

@@ -37,7 +37,8 @@ case class Query(name: String, sqlText: String, description: String, executionMo
 case class QueryForTest(
     query: Query,
     includeBreakdown: Boolean,
-    @transient sqlContext: SQLContext) {
+    @transient sqlContext: SQLContext,
+    dataBaseName: String = "parquet") {
   @transient val sparkContext = sqlContext.sparkContext
 
   val name = query.name
@@ -78,7 +79,10 @@ case class QueryForTest(
         query.executionMode match {
           case CollectResults => dataFrame.rdd.collect()
           case ForeachResults => dataFrame.rdd.foreach { row => Unit }
-          case WriteParquet(location) => dataFrame.write.xenon(s"$location/$name.parquet")
+          case WriteParquet(location) => dataBaseName match {
+            case "parquet" => dataFrame.write.parquet(s"$location/$name.parquet")
+            case "xenon" => dataFrame.write.xenon(s"$location/$name")
+          }
         }
       }
 

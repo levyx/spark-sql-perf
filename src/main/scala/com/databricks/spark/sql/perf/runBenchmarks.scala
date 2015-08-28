@@ -131,7 +131,8 @@ abstract class Dataset(
     sparkVersion: String,
     dataLocation: String,
     tables: Seq[Table],
-    scaleFactor: String) extends Serializable {
+    scaleFactor: String,
+    databaseName: String = "parquet") extends Serializable {
 
   val datasetName: String
 
@@ -145,7 +146,10 @@ abstract class Dataset(
     tablesForTest.foreach { table =>
       val fs = FileSystem.get(new java.net.URI(table.outputDir), sparkContext.hadoopConfiguration)
       val exists = fs.exists(new Path(table.outputDir))
-      val wasSuccessful = fs.exists(new Path(s"${table.outputDir}/_SUCCESS"))
+      val wasSuccessful = databaseName match {
+        case "parquet" => fs.exists(new Path(s"${table.outputDir}/_SUCCESS"))
+        case "xenon" => fs.exists(new Path(s"${table.outputDir}_xenon_schema/_SUCCESS"))
+      }
 
       if (!wasSuccessful) {
         if (exists) {
