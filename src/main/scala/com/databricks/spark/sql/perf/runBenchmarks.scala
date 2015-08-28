@@ -148,7 +148,7 @@ abstract class Dataset(
       val exists = fs.exists(new Path(table.outputDir))
       val wasSuccessful = databaseName match {
         case "parquet" => fs.exists(new Path(s"${table.outputDir}/_SUCCESS"))
-        case "xenon" => fs.exists(new Path(s"${table.outputDir}_xenon_schema/_SUCCESS"))
+        case "xenon" => fs.exists(new Path(s"${table.outputDir}_xenon_metadata/_SUCCESS"))
       }
 
       if (!wasSuccessful) {
