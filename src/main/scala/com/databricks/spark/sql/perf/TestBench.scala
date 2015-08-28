@@ -11,8 +11,8 @@ import org.apache.spark.{SparkConf, SparkContext}
 object TestBench {
   def main(args: Array[String]): Unit = {
     val conf = new SparkConf().setAppName("ParquetTest").setMaster("local[8]")
-    val tpcPath = "/Users/hamid/tpc/tools"
-    val resultsLocation = "/Users/hamid/results"
+    val tpcPath = "/home/hduser/TPCDSVersion1.3.1/tools"
+    val resultsLocation = "/results"
 
 
     val sc = new SparkContext(conf)
