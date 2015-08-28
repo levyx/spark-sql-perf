@@ -24,7 +24,7 @@ object TestBench {
     val tpcds =
       new TPCDS(
         sqlContext = sqlContext,
-        databaseName = "xenon",
+        databaseName = "parquet",
         sparkVersion = "1.3.0",
         dataLocation = tpcPath,
         dsdgenDir = tpcPath,
