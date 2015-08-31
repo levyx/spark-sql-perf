@@ -10,7 +10,7 @@ import org.apache.spark.{SparkConf, SparkContext}
  */
 object TestBench {
   def main(args: Array[String]): Unit = {
-    val conf = new SparkConf().setAppName("ParquetTest").setMaster("local[8]")
+    val conf = new SparkConf().setAppName("ParquetTest")
     val tpcPath = "/home/hduser/TPCDSVersion1.3.1/tools"
     val resultsLocation = "/results"
 
