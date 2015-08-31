@@ -43,7 +43,7 @@ object TestBench {
     // Use DataFrame API to get results of a single run.
     //allResults.filter("timestamp = 1429132621024")
     println("[")
-    allResults.toJSON.foreach(row => println(row+","))
+    allResults.toJSON.collect().foreach(row => println(row+","))
     println("]")
 
   }
