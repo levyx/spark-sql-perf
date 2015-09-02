@@ -1,17 +1,17 @@
 /*
- * Copyright 2015 Databricks Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ *    Copyright 2015 Databricks Inc.
+ * 
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ * 
+ *       http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
  */
 
 package org.apache.spark.sql.parquet // This is a hack until parquet has better support for partitioning.
@@ -19,33 +19,33 @@ package org.apache.spark.sql.parquet // This is a hack until parquet has better 
 import java.text.SimpleDateFormat
 import java.util.Date
 
-import org.apache.spark.mapreduce.SparkHadoopMapReduceUtil
-
-import scala.sys.process._
-
-
-import org.apache.hadoop.mapreduce.lib.output.{FileOutputFormat => NewFileOutputFormat}
-
 import com.databricks.spark.sql.perf._
 import org.apache.hadoop.conf.Configuration
 import org.apache.hadoop.fs.{FileSystem, Path}
-import org.apache.hadoop.mapreduce.{OutputCommitter, TaskAttemptContext, RecordWriter, Job}
+import org.apache.hadoop.mapreduce.lib.output.{FileOutputFormat => NewFileOutputFormat}
+import org.apache.hadoop.mapreduce.{Job, OutputCommitter, RecordWriter, TaskAttemptContext}
 import org.apache.spark.SerializableWritable
-import org.apache.spark.sql.{Column, ColumnName, SQLContext}
+import org.apache.spark.mapreduce.SparkHadoopMapReduceUtil
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
+import org.apache.spark.sql.{Column, ColumnName, SQLContext}
 import parquet.hadoop.ParquetOutputFormat
 import parquet.hadoop.util.ContextUtil
 
+import scala.sys.process._
+
+import scala.concurrent._
+import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 case class TPCDSTableForTest(
-    table: Table,
-    baseDir: String,
-    scaleFactor: Int,
-    dsdgenDir: String,
-    @transient sqlContext: SQLContext,
-    maxRowsPerPartitions: Int = 20 * 1000 * 1000,
-    databaseName: String)
+                              table: Table,
+                              baseDir: String,
+                              scaleFactor: Int,
+                              dsdgenDir: String,
+                              @transient sqlContext: SQLContext,
+                              maxRowsPerPartitions: Int = 20 * 1000 * 1000,
+                              databaseName: String)
   extends TableForTest(table, baseDir, sqlContext, databaseName) with Serializable with SparkHadoopMapReduceUtil {
 
   @transient val sparkContext = sqlContext.sparkContext
@@ -58,8 +58,39 @@ case class TPCDSTableForTest(
       case _ => 1
     }
 
-    val generatedData = {
-      sparkContext.parallelize(1 to partitions, partitions).flatMap { i =>
+
+    val generatedData = databaseName match {
+      // case "parquet" =>
+      //   sparkContext.parallelize(1 to partitions, partitions).flatMap { i =>
+      //     val localToolsDir = if (new java.io.File(dsdgen).exists) {
+      //       dsdgenDir
+      //     } else if (new java.io.File(s"/$dsdgen").exists) {
+      //       s"/$dsdgenDir"
+      //     } else {
+      //       sys.error(s"Could not find dsdgen at $dsdgen or /$dsdgen. Run install")
+      //     }
+
+      //     val parallel = if (partitions > 1) s"-parallel $partitions -child $i" else ""
+      //     val commands1 = Seq(
+      //       "bash", "-c",
+      //       s"cd $localToolsDir && ./dsdgen -table ${table.name} -force -scale $scaleFactor $parallel")
+      //     println(commands1)
+      //     commands1.lines
+      //     val commands2 = Seq(
+      //       "bash", "-c",
+      //       s"cat $localToolsDir/${table.name}_${i}_$partitions.dat 2> /dev/null || :")
+      //     println(commands2)
+      //     commands2.lines
+      //   }
+      // case "xenon" =>
+      case _ =>
+
+        val commands = Seq(
+          "bash", "-c",
+          s"hdfs dfs -mkdir -p $baseDir/dat")
+        println(commands)
+        commands.lines
+
         val localToolsDir = if (new java.io.File(dsdgen).exists) {
           dsdgenDir
         } else if (new java.io.File(s"/$dsdgen").exists) {
@@ -68,19 +99,32 @@ case class TPCDSTableForTest(
           sys.error(s"Could not find dsdgen at $dsdgen or /$dsdgen. Run install")
         }
 
-        val parallel = if (partitions > 1) s"-parallel $partitions -child $i" else ""
-        val commands1 = Seq(
-          "bash", "-c",
-          s"cd $localToolsDir && ./dsdgen -table ${table.name} -force -scale $scaleFactor $parallel")
-        println(commands1)
-        commands1.lines
-        val commands2 = Seq(
-          "bash", "-c",
-          s"cat $localToolsDir/${table.name}.dat")
-        println(commands2)
-        commands2.lines
-      }
+        val localFiles = (1 to partitions).map {
+          i => future {
+            val parallel = if (partitions > 1) s"-parallel $partitions -child $i" else ""
+            val commands1 = Seq(
+              "bash", "-c",
+              s"cd $localToolsDir && ./dsdgen -table ${table.name} -force -scale $scaleFactor $parallel")
+            println(commands1)
+            commands1.lines
+            val commands2 = if (partitions > 1) Seq(
+              "bash", "-c",
+              s"hdfs dfs -put $localToolsDir/${table.name}_${i}_$partitions.dat $baseDir/dat/${table.name}_${i}_$partitions.dat")
+            else Seq (
+              "bash", "-c",
+              s"hdfs dfs -put $localToolsDir/${table.name}.dat $baseDir/dat/${table.name}.dat")
+
+            println(commands2)
+            commands2.lines
+          }
+        }
+
+        localFiles.map{Await.result(_, Int.MaxValue seconds)}
+
+        sparkContext.textFile(s"$baseDir/dat/${table.name}*.dat")
     }
+
+
 
     generatedData.setName(s"${table.name}, sf=$scaleFactor, strings")
 
