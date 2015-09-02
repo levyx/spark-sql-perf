@@ -11,8 +11,8 @@ import org.apache.spark.{SparkConf, SparkContext}
 object TestBench {
   def main(args: Array[String]): Unit = {
     val conf = new SparkConf().setAppName("ParquetTest")
-    val dataLocation="/tpc-ds"
-    val tpcPath = "/home/hduser/TPCDSVersion1.3.1/tools"
+    val dataLocation="/mnt/ssd/tpc-ds"
+    val tpcPath = "/mnt/hdfs/TPCDSVersion1.3.1/tools"
     val resultsLocation = "/results"
 
 
@@ -25,8 +25,8 @@ object TestBench {
     val tpcds =
       new TPCDS(
         sqlContext = sqlContext,
-        databaseName = "parquet",
-        sparkVersion = "1.3.0",
+        databaseName = "xenon",
+        sparkVersion = "1.4.0",
         dataLocation = dataLocation,
         dsdgenDir = tpcPath,
         tables = tables.tables,
