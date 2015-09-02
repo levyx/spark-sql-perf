@@ -76,7 +76,7 @@ case class TPCDSTableForTest(
         commands1.lines
         val commands2 = Seq(
           "bash", "-c",
-          s"cat $localToolsDir/${table.name}.dat")
+          s"cat $localToolsDir/${table.name}_${i}_$partitions.dat 2> /dev/null || :")
         println(commands2)
         commands2.lines
       }
@@ -87,7 +87,7 @@ case class TPCDSTableForTest(
     val rows = generatedData.mapPartitions { iter =>
       val currentRow = new GenericMutableRow(schema.fields.size)
       iter.map { l =>
-        (0 until schema.fields.length).foreach(currentRow.setNullAt)
+        schema.fields.indices.foreach(currentRow.setNullAt)
         l.split("\\|", -1).zipWithIndex.dropRight(1).foreach { case (f, i) => currentRow(i) = f}
         currentRow: Row
       }

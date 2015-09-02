@@ -11,6 +11,7 @@ import org.apache.spark.{SparkConf, SparkContext}
 object TestBench {
   def main(args: Array[String]): Unit = {
     val conf = new SparkConf().setAppName("ParquetTest")
+    val dataLocation="/tpc-ds"
     val tpcPath = "/home/hduser/TPCDSVersion1.3.1/tools"
     val resultsLocation = "/results"
 
@@ -26,14 +27,14 @@ object TestBench {
         sqlContext = sqlContext,
         databaseName = "parquet",
         sparkVersion = "1.3.0",
-        dataLocation = tpcPath,
+        dataLocation = dataLocation,
         dsdgenDir = tpcPath,
         tables = tables.tables,
-        scaleFactor = "1")
+        scaleFactor = "5")
 
     tpcds.setup()
     val experiment = tpcds.runExperiment(queries.impalaKitQueries, resultsLocation, iterations=1)
-    experiment.waitForFinish(Int.MaxValue);
+    experiment.waitForFinish(Int.MaxValue)
 
     // Get experiments results.
 
