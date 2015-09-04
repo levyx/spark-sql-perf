@@ -56,7 +56,7 @@ class TPCDS (
   override val datasetName = "tpcds"
 
   lazy val baseDir =
-    userSpecifiedBaseDir.getOrElse(s"$dataLocation/scaleFactor=$scaleFactor/useDecimal=true")
+    userSpecifiedBaseDir.getOrElse(s"$dataLocation/scaleFactor=$scaleFactor/useDecimal=true/$databaseName")
 
   override def createTablesForTest(tables: Seq[Table]): Seq[TableForTest] = {
     tables.map(table =>

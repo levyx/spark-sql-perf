@@ -87,7 +87,7 @@ case class TPCDSTableForTest(
 
         val commands = Seq(
           "bash", "-c",
-          s"hdfs dfs -mkdir -p $baseDir/dat")
+          s"mkdir -p $baseDir/dat")
         println(commands)
         commands.lines
 
@@ -109,10 +109,10 @@ case class TPCDSTableForTest(
             commands1.lines
             val commands2 = if (partitions > 1) Seq(
               "bash", "-c",
-              s"hdfs dfs -put $localToolsDir/${table.name}_${i}_$partitions.dat $baseDir/dat/${table.name}_${i}_$partitions.dat")
+              s"cp $localToolsDir/${table.name}_${i}_$partitions.dat $baseDir/dat/${table.name}_${i}_$partitions.dat")
             else Seq (
               "bash", "-c",
-              s"hdfs dfs -put $localToolsDir/${table.name}.dat $baseDir/dat/${table.name}.dat")
+              s"cp $localToolsDir/${table.name}.dat $baseDir/dat/${table.name}.dat")
 
             println(commands2)
             commands2.lines
@@ -131,7 +131,7 @@ case class TPCDSTableForTest(
     val rows = generatedData.mapPartitions { iter =>
       val currentRow = new GenericMutableRow(schema.fields.size)
       iter.map { l =>
-        (0 until schema.fields.length).foreach(currentRow.setNullAt)
+        schema.fields.indices.foreach(currentRow.setNullAt)
         l.split("\\|", -1).zipWithIndex.dropRight(1).foreach { case (f, i) => currentRow(i) = f}
         currentRow: Row
       }

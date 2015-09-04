@@ -110,6 +110,7 @@ case class Variation[T](name: String, options: Seq[T])(val setup: T => Unit)
 case class ExperimentRun(
     timestamp: Long,
     datasetName: String,
+    databaseName: String,
     iteration: Int,
     tags: Map[String, String],
     configuration: BenchmarkConfiguration,
@@ -233,6 +234,7 @@ abstract class Dataset(
             val result = ExperimentRun(
               timestamp = timestamp,
               datasetName = datasetName,
+              databaseName = databaseName,
               iteration = i,
               tags = currentOptions.toMap ++ tags,
               configuration = currentConfiguration,

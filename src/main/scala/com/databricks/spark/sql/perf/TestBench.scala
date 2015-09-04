@@ -10,10 +10,10 @@ import org.apache.spark.{SparkConf, SparkContext}
  */
 object TestBench {
   def main(args: Array[String]): Unit = {
-    val conf = new SparkConf().setAppName("ParquetTest")
-    val dataLocation="/mnt/ssd/tpc-ds"
-    val tpcPath = "/mnt/hdfs/TPCDSVersion1.3.1/tools"
-    val resultsLocation = "/results"
+    val conf = new SparkConf().setAppName("ParquetTest").setMaster("local[8]")
+    val dataLocation="/tmp/mnt/ssd/tpc-ds"
+    val tpcPath = "/Users/hamid/tpc/tools"
+    val resultsLocation = "/tmp/results"
 
 
     val sc = new SparkContext(conf)
@@ -25,7 +25,7 @@ object TestBench {
     val tpcds =
       new TPCDS(
         sqlContext = sqlContext,
-        databaseName = "xenon",
+        databaseName = "parquet",
         sparkVersion = "1.4.0",
         dataLocation = dataLocation,
         dsdgenDir = tpcPath,
@@ -34,7 +34,7 @@ object TestBench {
 
     tpcds.setup()
     val experiment = tpcds.runExperiment(queries.impalaKitQueries, resultsLocation, iterations=1)
-    experiment.waitForFinish(Int.MaxValue);
+    experiment.waitForFinish(Int.MaxValue)
 
     // Get experiments results.
 
@@ -44,7 +44,7 @@ object TestBench {
     // Use DataFrame API to get results of a single run.
     //allResults.filter("timestamp = 1429132621024")
     println("[")
-    allResults.toJSON.foreach(row => println(row+","))
+    allResults.toJSON.collect().foreach(row => println(row+","))
     println("]")
 
   }
