@@ -110,7 +110,7 @@ case class QueryForTest(
     } catch {
       case e: Exception =>
         throw new RuntimeException(
-          s"Failed to benchmark query ${query.name}", e)
+          s"Failed to benchmark query ${query.name}, original message:${e.getMessage}", e)
     }
   }
 }
