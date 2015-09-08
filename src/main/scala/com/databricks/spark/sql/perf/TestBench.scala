@@ -33,9 +33,11 @@ object TestBench {
         scaleFactor = "5")
 
     tpcds.setup()
-    val experiment = tpcds.runExperiment(queries.impalaKitQueries, resultsLocation, iterations=1)
+    val experiment = tpcds.runExperiment(queries.xenonQueries, resultsLocation, iterations=1)
     experiment.waitForFinish(Int.MaxValue)
-
+    println()
+    println(" ============== Experiment status messages ==============")
+    experiment.currentMessages.foreach(println)
     // Get experiments results.
 
     val results = Results(resultsLocation = resultsLocation , sqlContext = sqlContext)
