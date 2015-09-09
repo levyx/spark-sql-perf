@@ -10,11 +10,10 @@ import org.apache.spark.{SparkConf, SparkContext}
  */
 object TestBench {
   def main(args: Array[String]): Unit = {
-    val conf = new SparkConf().setAppName("ParquetTest").setMaster("local[8]")
-    val dataLocation="/tmp/mnt/ssd/tpc-ds"
-    val tpcPath = "/Users/hamid/tpc/tools"
-    val resultsLocation = "/tmp/results"
-
+    val conf = new SparkConf().setAppName("ParquetTest")
+    val dataLocation="/home/hamid/ssd/tpc-ds"
+    val tpcPath = "/home/hamid/TPCDSVersion1.3.1/tools"
+    val resultsLocation = "/home/hamid/results"
 
     val sc = new SparkContext(conf)
     val sqlContext = new org.apache.spark.sql.SQLContext(sc)
@@ -25,15 +24,15 @@ object TestBench {
     val tpcds =
       new TPCDS(
         sqlContext = sqlContext,
-        databaseName = "parquet",
+        databaseName = "xenon",
         sparkVersion = "1.4.0",
         dataLocation = dataLocation,
         dsdgenDir = tpcPath,
         tables = tables.tables,
-        scaleFactor = "1")
+        scaleFactor = "5")
 
     tpcds.setup()
-    val experiment = tpcds.runExperiment(queries.xenonQueries, resultsLocation, iterations=1)
+    val experiment = tpcds.runExperiment(queries.impalaKitQueries, resultsLocation, iterations=1)
     experiment.waitForFinish(Int.MaxValue)
     println()
     println(" ============== Experiment status messages ==============")
