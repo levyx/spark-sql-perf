@@ -149,7 +149,7 @@ abstract class Dataset(
       val exists = fs.exists(new Path(table.outputDir))
       val wasSuccessful = databaseName match {
         case "parquet" => fs.exists(new Path(s"${table.outputDir}/_SUCCESS"))
-        case "xenon" => new java.io.File(s"${table.outputDir}_xenon_metadata/_SUCCESS").exists
+        case "xenon" => fs.exists(new Path(s"${table.outputDir}_xenon_metadata/_SUCCESS"))
       }
 
       if (!wasSuccessful) {
