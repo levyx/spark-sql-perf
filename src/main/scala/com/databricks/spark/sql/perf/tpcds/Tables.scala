@@ -109,7 +109,7 @@ case class TPCDSTableForTest(
             commands1.lines
             val commands2 = if (partitions > 1) Seq(
               "bash", "-c",
-              s"hdfs dfs -put $localToolsDir/${table.name}_${i}_$partitions.dat $baseDir/dat/${table.name}_${i}_$partitions.dat")
+              s" if [ -e $localToolsDir/${table.name}_${i}_$partitions.dat ]; then hdfs dfs -put $localToolsDir/${table.name}_${i}_$partitions.dat $baseDir/dat/${table.name}_${i}_$partitions.dat; fi ")
             else Seq (
               "bash", "-c",
               s"hdfs dfs -put $localToolsDir/${table.name}.dat $baseDir/dat/${table.name}.dat")

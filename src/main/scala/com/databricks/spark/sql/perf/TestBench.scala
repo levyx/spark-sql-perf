@@ -11,9 +11,32 @@ import org.apache.spark.{SparkConf, SparkContext}
 object TestBench {
   def main(args: Array[String]): Unit = {
     val conf = new SparkConf().setAppName("ParquetTest")
-    val dataLocation="/mnt/ssd/tpc-ds"
-    val tpcPath = "/mnt/hdfs/TPCDSVersion1.3.1/tools"
-    val resultsLocation = "/results"
+
+    var dataLocation ="/mnt/ssd/tpc-ds"
+    var tpcPath = "/mnt/hdfs/TPCDSVersion1.3.1/tools"
+    var resultsLocation = "/results"
+    var databaseName = "xenon"
+    var scaleFactor = "5"
+
+    for (arg <- args) {
+      arg match {
+        case "-p" => dataLocation    = args(args.indexOf(arg) + 1)
+        case "-t" => tpcPath         = args(args.indexOf(arg) + 1)
+        case "-r" => resultsLocation = args(args.indexOf(arg) + 1)
+        case "-d" => databaseName    = args(args.indexOf(arg) + 1)
+        case "-s" => scaleFactor     = args(args.indexOf(arg) + 1)
+        case _    =>
+      }
+    }
+
+    println("\n\nConfiguration:\n")
+    println("%40s".format("Data Path: [-p]") + "\t" + dataLocation)    
+    println("%40s".format("TPC-DS Path: [-t]") + "\t" + tpcPath)
+    println("%40s".format("results Path: [-r]") + "\t" + resultsLocation)
+    println("%40s".format("Database namen: [-d]") + "\t" + databaseName)
+    println("%40s".format("scale Factor: [-s]") + "\t" + scaleFactor)   
+    println()
+
 
 
     val sc = new SparkContext(conf)
@@ -25,12 +48,12 @@ object TestBench {
     val tpcds =
       new TPCDS(
         sqlContext = sqlContext,
-        databaseName = "xenon",
+        databaseName = databaseName,
         sparkVersion = "1.4.0",
         dataLocation = dataLocation,
         dsdgenDir = tpcPath,
         tables = tables.tables,
-        scaleFactor = "5")
+        scaleFactor =scaleFactor)
 
     tpcds.setup()
     val experiment = tpcds.runExperiment(queries.impalaKitQueries, resultsLocation, iterations=1)
