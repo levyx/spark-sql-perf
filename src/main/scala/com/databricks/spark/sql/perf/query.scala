@@ -43,11 +43,11 @@ case class QueryForTest(
 
   val name = query.name
 
-  def benchmarkMs[A](f: => A): Double = {
+  def benchmarkMs[A](f: => A): (Double, A) = {
     val startTime = System.nanoTime()
     val ret = f
     val endTime = System.nanoTime()
-    (endTime - startTime).toDouble / 1000000
+    ((endTime - startTime).toDouble / 1000000, ret)
   }
 
   def benchmark(description: String = "") = {
@@ -56,17 +56,17 @@ case class QueryForTest(
       val dataFrame = sqlContext.sql(query.sqlText)
       val queryExecution = dataFrame.queryExecution
       // We are not counting the time of ScalaReflection.convertRowToScala.
-      val parsingTime = benchmarkMs { queryExecution.logical }
-      val analysisTime = benchmarkMs { queryExecution.analyzed }
-      val optimizationTime = benchmarkMs { queryExecution.optimizedPlan }
-      val planningTime = benchmarkMs { queryExecution.executedPlan }
+      val parsingTime = benchmarkMs { queryExecution.logical }._1
+      val analysisTime = benchmarkMs { queryExecution.analyzed }._1
+      val optimizationTime = benchmarkMs { queryExecution.optimizedPlan }._1
+      val planningTime = benchmarkMs { queryExecution.executedPlan }._1
 
       val breakdownResults = if (includeBreakdown) {
         val depth = queryExecution.executedPlan.treeString.split("\n").size
         val physicalOperators = (0 until depth).map(i => (i, queryExecution.executedPlan(i)))
         physicalOperators.map {
           case (index, node) =>
-            val executionTime = benchmarkMs { node.execute().map(_.copy()).foreach(row => Unit) }
+            val executionTime = benchmarkMs { node.execute().map(_.copy()).foreach(row => Unit) }._1
             BreakdownResult(node.nodeName, node.simpleString, index, executionTime)
         }
       } else {
@@ -75,10 +75,10 @@ case class QueryForTest(
 
       // The executionTime for the entire query includes the time of type conversion
       // from catalyst to scala.
-      val executionTime = benchmarkMs {
+      val (executionTime, queryResponse) = benchmarkMs {
         query.executionMode match {
-          case CollectResults => dataFrame.rdd.collect()
-          case ForeachResults => dataFrame.rdd.foreach { row => Unit }
+          case CollectResults => dataFrame.rdd.collect().map(row => row.toString).reduce((acc, n) => acc + '\n' + n)
+          case ForeachResults => dataFrame.rdd.foreach { row => println(row) }
           case WriteParquet(location) => dataBaseName match {
             case "parquet" => dataFrame.write.parquet(s"$location/$name.parquet")
             case "xenon" => dataFrame.write.xenon(s"$location/$name")
@@ -106,6 +106,7 @@ case class QueryForTest(
         optimizationTime = optimizationTime,
         planningTime = planningTime,
         executionTime = executionTime,
+        queryResponse = queryResponse.toString,
         breakdownResults)
     } catch {
       case e: Exception =>

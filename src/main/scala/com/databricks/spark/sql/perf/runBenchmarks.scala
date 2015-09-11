@@ -76,6 +76,7 @@ case class BenchmarkResult(
     optimizationTime: Double,
     planningTime: Double,
     executionTime: Double,
+    queryResponse: String,
     breakDown: Seq[BreakdownResult])
 
 /**
