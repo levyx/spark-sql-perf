@@ -72,5 +72,12 @@ object TestBench {
     allResults.toJSON.collect().foreach(row => println(row+","))
     println("]")
 
+    println()
+    allResults.select("results.queryResponse").collect().foreach(
+      s => {
+        println(s)
+        println("~~~~~~~~~~~~~~~~~~~~~~~~")
+      }
+    )
   }
 }
