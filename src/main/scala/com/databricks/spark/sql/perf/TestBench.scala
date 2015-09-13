@@ -1,7 +1,7 @@
 package com.databricks.spark.sql.perf
 
 import com.databricks.spark.sql.perf.tpcds._
-import org.apache.spark.sql.parquet.Tables
+import org.apache.spark.sql.execution.datasources.parquet.Tables
 import org.apache.spark.{SparkConf, SparkContext}
 
 

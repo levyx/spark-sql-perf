@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package org.apache.spark.sql.parquet // This is a hack until parquet has better support for partitioning.
+package org.apache.spark.sql.execution.datasources.parquet // This is a hack until parquet has better support for partitioning.
 
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -28,7 +28,7 @@ import org.apache.spark.SerializableWritable
 import org.apache.spark.mapreduce.SparkHadoopMapReduceUtil
 import org.apache.spark.sql.catalyst.expressions._
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
-import org.apache.spark.sql.{Column, ColumnName, SQLContext}
+import org.apache.spark.sql.{Row, Column, ColumnName, SQLContext}
 import parquet.hadoop.ParquetOutputFormat
 import parquet.hadoop.util.ContextUtil
 
@@ -133,7 +133,7 @@ case class TPCDSTableForTest(
       iter.map { l =>
         schema.fields.indices.foreach(currentRow.setNullAt)
         l.split("\\|", -1).zipWithIndex.dropRight(1).foreach { case (f, i) => currentRow(i) = f}
-        currentRow: Row
+        Row.fromSeq(currentRow.toSeq(schema))
       }
     }
 
@@ -161,15 +161,15 @@ case class TPCDSTableForTest(
 
             val writeSupport =
               if (schema.fields.map(_.dataType).forall(ParquetTypesConverter.isPrimitiveType)) {
-                classOf[org.apache.spark.sql.parquet.MutableRowWriteSupport]
+                classOf[org.apache.spark.sql.execution.datasources.parquet.MutableRowWriteSupport]
               } else {
-                classOf[org.apache.spark.sql.parquet.RowWriteSupport]
+                classOf[org.apache.spark.sql.execution.datasources.parquet.RowWriteSupport]
               }
 
             ParquetOutputFormat.setWriteSupportClass(job, writeSupport)
 
             val conf = new SerializableWritable(ContextUtil.getConfiguration(job))
-            org.apache.spark.sql.parquet.RowWriteSupport.setSchema(schema.toAttributes, conf.value)
+            org.apache.spark.sql.execution.datasources.parquet.RowWriteSupport.setSchema(schema.toAttributes, conf.value)
 
             val partColumnAttr =
               BindReferences.bindReference[Expression](
@@ -214,7 +214,7 @@ case class TPCDSTableForTest(
                 if ((getPartition(currentRow) != currentPartition || writer == null) &&
                   !getPartition.currentValue.isNullAt(0)) {
                   rowCount = 0
-                  currentPartition = getPartition.currentValue.copy()
+                  currentPartition = Row.fromSeq(getPartition.currentValue.toSeq(schema)).copy()
                   if (writer != null) {
                     writer.close(hadoopContext)
                     committer.commitTask(hadoopContext)
@@ -240,7 +240,7 @@ case class TPCDSTableForTest(
 
                 }
                 if (!getPartition.currentValue.isNullAt(0)) {
-                  writer.write(null, currentRow)
+                  writer.write(null, Row.fromSeq(currentRow.toSeq(schema)))
                 }
               }
               if (writer != null) {
