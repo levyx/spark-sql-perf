@@ -12,11 +12,11 @@ object TestBench {
   def main(args: Array[String]): Unit = {
     val conf = new SparkConf().setAppName("ParquetTest").setMaster("local[*]")
 
-    var dataLocation ="/mnt/ssd/tpc-ds"
-    var tpcPath = "/mnt/hdfs/TPCDSVersion1.3.1/tools"
-    var resultsLocation = "/results"
+    var dataLocation ="/tmp/mnt/ssd/tpc-ds"
+    var tpcPath = "/Users/hamid/tpc/tools"
+    var resultsLocation = "/tmp/results"
     var databaseName = "xenon"
-    var scaleFactor = "5"
+    var scaleFactor = "1"
 
     for (arg <- args) {
       arg match {
