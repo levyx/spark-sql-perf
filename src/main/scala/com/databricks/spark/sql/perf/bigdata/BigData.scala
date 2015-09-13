@@ -18,7 +18,7 @@ package com.databricks.spark.sql.perf.bigdata
 
 import com.databricks.spark.sql.perf._
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.parquet.TPCDSTableForTest
+import org.apache.spark.sql.execution.datasources.parquet.TPCDSTableForTest
 import org.apache.spark.sql.{Column, SQLContext}
 
 class BigData (
