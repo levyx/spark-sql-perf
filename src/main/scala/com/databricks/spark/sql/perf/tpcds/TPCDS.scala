@@ -70,12 +70,16 @@ class TPCDS (
 
   def setupBroadcast(skipTables: Seq[String] = Seq("store_sales", "customer")) = {
     val skipExpr = skipTables.map(t => !('tableName === t)).reduceLeft[Column](_ && _)
-    val threshold =
+    val threshold = if(
       allStats
         .where(skipExpr)
         .select(max('sizeInBytes))
         .first()
-        .getLong(0)
+        .getLong(0) < 100000000) {allStats
+        .where(skipExpr)
+        .select(max('sizeInBytes))
+        .first()
+        .getLong(0)} else 100000000
     val setQuery = s"SET spark.sql.autoBroadcastJoinThreshold=$threshold"
 
     println(setQuery)
