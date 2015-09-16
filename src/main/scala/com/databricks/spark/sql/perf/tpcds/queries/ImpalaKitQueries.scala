@@ -26,17 +26,10 @@ object ImpalaKitQueries {
     ("q19", """
               |-- start query 1 in stream 0 using template query19.tpl
               |select
-              |  i_brand_id
+              |  *
               |from
-              |  store_sales
-              |  join item on (store_sales.ss_item_sk = item.i_item_sk)
-              |where
-              |  i_manager_id = 7
-              |group by
-              |  i_brand_id
-              |order by
-              |  i_brand_id
-              |limit 100
+              |  item
+              |limit 10
               |-- end query 1 in stream 0 using template query19.tpl
             """.stripMargin),
 
