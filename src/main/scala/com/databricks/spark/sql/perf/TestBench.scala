@@ -74,7 +74,7 @@ object TestBench {
 
     val schema = StructType(fields)
 
-    val generatedData = sc.textFile(s"/tmp/item.dat")
+    val generatedData = sc.textFile(s"/item.dat")
     val rows = generatedData.mapPartitions { iter =>
       val currentRow = new GenericMutableRow(schema.fields.size)
       iter.map { l =>
