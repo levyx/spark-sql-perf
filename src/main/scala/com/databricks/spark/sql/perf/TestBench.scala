@@ -50,12 +50,12 @@ object TestBench {
     import sqlContext.implicits._
     val fields = Array(
       'i_id                 .int,
-      'i_f1                 .int,
-      'i_d2                 .int)
+      'i_f1                 .string,
+      'i_d2                 .string)
 
     val schema = StructType(fields)
 
-    val generatedData = sc.parallelize((1 to 10).map{n => s"$n|${n+100}|${n+200}|"})
+    val generatedData = sc.parallelize((1 to 1000000).map{n => s"$n|${n+100}|${n+200}|"})
 
     val rows = generatedData.mapPartitions { iter =>
       val currentRow = new GenericMutableRow(schema.fields.size)
@@ -78,10 +78,10 @@ object TestBench {
       }
       stringData.select(columns: _*)
     }
-    convertedData.write.parquet("/tmp/mnt/ssd/item")
+    convertedData.write.xenon("/mnt/ssd/item")
 
 
-    val table = sqlContext.read.parquet("/tmp/mnt/ssd/item")
+    val table = sqlContext.read.xenon("/mnt/ssd/item")
     table.registerTempTable("item")
 
     println(sqlContext.sql("""
@@ -90,7 +90,7 @@ object TestBench {
                      |  *
                      |from
                      |  item
-                     |limit 10
+                     |limit 100
                      |-- end query 1 in stream 0 using template query19.tpl
                    """.stripMargin).collect().foreach(println))
 
