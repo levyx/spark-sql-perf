@@ -55,7 +55,7 @@ object TestBench {
 
     val schema = StructType(fields)
 
-    val generatedData = sc.parallelize((1 to 100).map{n => s"$n|${n+100}|${n+200}|"})
+    val generatedData = sc.parallelize((1 to 10).map{n => s"$n|${n+100}|${n+200}|"})
 
     val rows = generatedData.mapPartitions { iter =>
       val currentRow = new GenericMutableRow(schema.fields.size)
@@ -78,10 +78,10 @@ object TestBench {
       }
       stringData.select(columns: _*)
     }
-    convertedData.write.xenon("/tmp/mnt/ssd/item")
+    convertedData.write.parquet("/tmp/mnt/ssd/item")
 
 
-    val table = sqlContext.read.xenon("/tmp/mnt/ssd/item")
+    val table = sqlContext.read.parquet("/tmp/mnt/ssd/item")
     table.registerTempTable("item")
 
     println(sqlContext.sql("""
