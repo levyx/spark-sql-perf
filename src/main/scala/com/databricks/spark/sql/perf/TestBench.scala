@@ -96,10 +96,10 @@ object TestBench {
       }
       stringData.select(columns: _*)
     }
-    convertedData.write.xenon("/tmp/mnt/ssd/tpc-ds/item")
+    convertedData.write.xenon("/mnt/ssd/tpc-ds/item")
 
 
-    val table = sqlContext.read.xenon("/tmp/mnt/ssd/tpc-ds/item")
+    val table = sqlContext.read.xenon("/mnt/ssd/tpc-ds/item")
     table.registerTempTable("item")
 
     println(sqlContext.sql("""
