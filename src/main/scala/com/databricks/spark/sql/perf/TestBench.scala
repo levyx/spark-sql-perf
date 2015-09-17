@@ -49,32 +49,14 @@ object TestBench {
 
     import sqlContext.implicits._
     val fields = Array(
-      'i_item_sk                 .int,
-      'i_item_id                 .string,
-      'i_rec_start_date          .string,
-      'i_rec_end_date            .string,
-      'i_item_desc               .string,
-      'i_current_price           .decimal(7,2),
-      'i_wholesale_cost          .decimal(7,2),
-      'i_brand_id                .int,
-      'i_brand                   .string,
-      'i_class_id                .int,
-      'i_class                   .string,
-      'i_category_id             .int,
-      'i_category                .string,
-      'i_manufact_id             .int,
-      'i_manufact                .string,
-      'i_size                    .string,
-      'i_formulation             .string,
-      'i_color                   .string,
-      'i_units                   .string,
-      'i_container               .string,
-      'i_manager_id              .int,
-      'i_product_name            .string)
+      'i_id                 .int,
+      'i_f1                 .int,
+      'i_d2                 .int)
 
     val schema = StructType(fields)
 
-    val generatedData = sc.textFile(s"/item.dat")
+    val generatedData = sc.parallelize((1 to 100).map{n => s"$n|${n+100}|${n+200}|"})
+
     val rows = generatedData.mapPartitions { iter =>
       val currentRow = new GenericMutableRow(schema.fields.size)
       iter.map { l =>
@@ -96,10 +78,10 @@ object TestBench {
       }
       stringData.select(columns: _*)
     }
-    convertedData.write.parquet("/tmp/mnt/ssd/item")
+    convertedData.write.xenon("/tmp/mnt/ssd/item")
 
 
-    val table = sqlContext.read.parquet("/tmp/mnt/ssd/item")
+    val table = sqlContext.read.xenon("/tmp/mnt/ssd/item")
     table.registerTempTable("item")
 
     println(sqlContext.sql("""
@@ -150,6 +132,6 @@ object TestBench {
     //     println("~~~~~~~~~~~~~~~~~~~~~~~~")
     //   }
     // )
-    println
+    while(true){}
   }
 }
