@@ -1,8 +1,13 @@
 package com.databricks.spark.sql.perf
 
 import com.databricks.spark.sql.perf.tpcds._
-import org.apache.spark.sql.execution.datasources.parquet.Tables
+import org.apache.spark.sql.catalyst.expressions.GenericMutableRow
+import org.apache.spark.sql.{ColumnName, Row, types}
+import org.apache.spark.sql.execution.datasources.parquet.{TPCDSTableForTest, Tables}
+import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import org.apache.spark.{SparkConf, SparkContext}
+
+import scala.collection.mutable
 
 
 /**
@@ -16,7 +21,7 @@ object TestBench {
     var tpcPath = "/mnt/hdfs/TPCDSVersion1.3.1/tools"
     var resultsLocation = "/results"
     var databaseName = "xenon"
-    var scaleFactor = "5"
+    var scaleFactor = "1"
 
     for (arg <- args) {
       arg match {
@@ -37,10 +42,76 @@ object TestBench {
     println("%40s".format("scale Factor: [-s]") + "\t" + scaleFactor)   
     println()
 
-    
 
     val sc = new SparkContext(conf)
     val sqlContext = new org.apache.spark.sql.SQLContext(sc)
+
+
+    import sqlContext.implicits._
+    val fields = Array(
+      'i_item_sk                 .int,
+      'i_item_id                 .string,
+      'i_rec_start_date          .string,
+      'i_rec_end_date            .string,
+      'i_item_desc               .string,
+      'i_current_price           .decimal(7,2),
+      'i_wholesale_cost          .decimal(7,2),
+      'i_brand_id                .int,
+      'i_brand                   .string,
+      'i_class_id                .int,
+      'i_class                   .string,
+      'i_category_id             .int,
+      'i_category                .string,
+      'i_manufact_id             .int,
+      'i_manufact                .string,
+      'i_size                    .string,
+      'i_formulation             .string,
+      'i_color                   .string,
+      'i_units                   .string,
+      'i_container               .string,
+      'i_manager_id              .int,
+      'i_product_name            .string)
+
+    val schema = StructType(fields)
+
+    val generatedData = sc.textFile(s"/tmp/item.dat")
+    val rows = generatedData.mapPartitions { iter =>
+      val currentRow = new GenericMutableRow(schema.fields.size)
+      iter.map { l =>
+        schema.fields.indices.foreach(currentRow.setNullAt)
+        l.split("\\|", -1).zipWithIndex.dropRight(1).foreach { case (f, i) => currentRow(i) = f}
+        Row.fromSeq(currentRow.toSeq(schema))
+      }
+    }
+
+    val stringData =
+      sqlContext.createDataFrame(
+        rows,
+        StructType(schema.fields.map(f => StructField(f.name, StringType))))
+
+    val convertedData = {
+      val columns = schema.fields.map { f =>
+        val columnName = new ColumnName(f.name)
+        columnName.cast(f.dataType).as(f.name)
+      }
+      stringData.select(columns: _*)
+    }
+    convertedData.write.xenon("/tmp/mnt/ssd/tpc-ds/item")
+
+
+    val table = sqlContext.read.xenon("/tmp/mnt/ssd/tpc-ds/item")
+    table.registerTempTable("item")
+
+    println(sqlContext.sql("""
+                     |-- start query 1 in stream 0 using template query19.tpl
+                     |select
+                     |  *
+                     |from
+                     |  item
+                     |limit 10
+                     |-- end query 1 in stream 0 using template query19.tpl
+                   """.stripMargin).collect().foreach(println))
+
 
     // // Tables in TPC-DS benchmark used by experiments.
     // val tables = Tables(sqlContext)
@@ -79,6 +150,6 @@ object TestBench {
     //     println("~~~~~~~~~~~~~~~~~~~~~~~~")
     //   }
     // )
-
+    println
   }
 }
