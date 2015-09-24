@@ -75,11 +75,11 @@ class TPCDS (
         .where(skipExpr)
         .select(max('sizeInBytes))
         .first()
-        .getLong(0) < 100000000) {allStats
+        .getLong(0) < 10) {allStats
         .where(skipExpr)
         .select(max('sizeInBytes))
         .first()
-        .getLong(0)} else 100000000
+        .getLong(0)} else 10
     val setQuery = s"SET spark.sql.autoBroadcastJoinThreshold=$threshold"
 
     println(setQuery)
