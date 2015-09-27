@@ -1,14 +1,50 @@
 package com.databricks.spark.sql.perf
 
+import java.io.File
+
 import com.databricks.spark.sql.perf.tpcds._
 import org.apache.spark.sql.execution.datasources.parquet.Tables
 import org.apache.spark.{SparkConf, SparkContext}
+import scala.collection.immutable.Map
+import scala.util.parsing.json._
 
 
 /**
  * Created by hamid on 8/16/15.
  */
 object TestBench {
+  def printToFile(f: java.io.File)(op: java.io.PrintWriter => Unit) {
+    val p = new java.io.PrintWriter(f)
+    try { op(p) } finally { p.close() }
+  }
+
+  def extractInfo(pre: String, result: Option[Any]): List[(String,String)] = {
+    result match {
+      case Some(e) => e.asInstanceOf[Map[String, Any]].toList.flatMap {
+        case (k, v) => v match {
+          case h: Map[String, Any] => extractInfo(pre+k+".",Some(v))
+          case l: List[Any] => Nil
+          case _ => List((pre+k, v match {case s:String => s.replaceAll("\\n","\\\\n"); case i:Double => "%1.4f".format(i).replaceAll("\\.0+$","")}))
+        }
+      }
+      case _ => List[(String, String)]()
+    }
+  }
+
+  def getResultRecords(result: Option[Any]): List[List[(String,String)]] = {
+    result match {
+      case Some(e) =>
+        e.asInstanceOf[Map[String, Any]].getOrElse("results",List[Any]()).asInstanceOf[List[Any]].map {
+          i =>
+            val timeStamp: Double = e.asInstanceOf[Map[String, Double]].getOrElse("timestamp",0)
+            ("timestamp","%1.4f".format(timeStamp).replaceAll("\\.0+$","")) :: extractInfo("", Some(i))
+        }
+      case _ => List[List[(String, String)]]()
+    }
+  }
+
+
+
   def main(args: Array[String]): Unit = {
     val conf = new SparkConf().setAppName("ParquetTest")
 
@@ -49,7 +85,7 @@ object TestBench {
       new TPCDS(
         sqlContext = sqlContext,
         databaseName = databaseName,
-        sparkVersion = "1.4.0",
+        sparkVersion = "1.5.0",
         dataLocation = dataLocation,
         dsdgenDir = tpcPath,
         tables = tables.tables,
@@ -68,16 +104,27 @@ object TestBench {
     val allResults = results.allResults
     // Use DataFrame API to get results of a single run.
     //allResults.filter("timestamp = 1429132621024")
-    println("[")
-    allResults.toJSON.collect().foreach(row => println(row+","))
-    println("]")
 
-    println()
-    allResults.select("results.queryResponse").collect().foreach(
-      s => {
-        println(s)
-        println("~~~~~~~~~~~~~~~~~~~~~~~~")
+    val firstResult = JSON.parseFull(allResults.toJSON.collect().head)
+    val a = extractInfo("", firstResult)
+
+    printToFile(new File("config.csv")) { p =>
+      p.println(a.map(r => r._1).reduce((s,r)=> s+"|"+r))
+
+      allResults.toJSON.collect().foreach { result =>
+        val a = extractInfo("", JSON.parseFull(result))
+        p.println(a.map(r => r._2).reduce((s, r) => s + "|" + r))
       }
-    )
+    }
+
+    printToFile(new File("results.csv")) { p =>
+    val b = getResultRecords(firstResult).head
+      p.println(b.map(r => r._1).reduce((s,r)=> s+"|"+r))
+      allResults.toJSON.collect().foreach { result =>
+        val b = getResultRecords(JSON.parseFull(result))
+        b.foreach{row => p.println(row.map(r => r._2).reduce((s, r) => s + "|" + r))}
+      }
+    }
+
   }
 }
